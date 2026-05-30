@@ -1,0 +1,49 @@
+# Build output
+build/
+*.exe
+*.dll
+*.obj
+*.o
+*.moc
+*.a
+*.lib
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+.ninja_*
+Testing/
+CMakeUserPresets.json
+
+# Qt Creator / IDE
+*.user
+*.autogen
+*.pro.user
+*.qmlc
+*.jsc
+moc_*
+ui_*
+qrc_*
+.vs/
+.vscode/
+*.code-workspace
+
+# Qt temp
+.qt/
+.qtc_clangd/
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Backup / temp files
+*.bak
+*.pyc
+__pycache__/
+
+# IDE directories
+.idea/
+*.sln
+*.vcxproj*

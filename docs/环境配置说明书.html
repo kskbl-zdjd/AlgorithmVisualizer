@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgorithmVisualizer 环境配置说明书</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --text: #1a1a2e;
+    --text2: #555;
+    --text3: #888;
+    --accent: #534AB7;
+    --accent-light: #EEEDFE;
+    --border: #e0e0e0;
+    --radius: 10px;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --blue: #378ADD;
+    --blue-light: #E6F1FB;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.7;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 20px 24px 80px;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .hero h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .hero .subtitle {
+    font-size: 15px;
+    color: var(--text2);
+  }
+  .hero .badge {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-top: 12px;
+    font-weight: 500;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent-light);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+    color: var(--text);
+  }
+
+  p { margin: 12px 0; font-size: 14px; color: var(--text2); }
+
+  .diagram-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .diagram-wrap svg { max-width: 100%; height: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--surface);
+    font-weight: 500;
+    color: var(--text);
+  }
+  td { color: var(--text2); }
+  tr:hover td { background: #fafbfc; }
+
+  .step {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 20px 0;
+    border-left: 4px solid var(--accent);
+  }
+  .step .step-num {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    width: 28px;
+    height: 28px;
+    text-align: center;
+    line-height: 28px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 10px;
+  }
+  .step .step-title {
+    font-size: 16px;
+    font-weight: 600;
+    display: inline;
+  }
+  .step p, .step ul { margin-left: 38px; }
+
+  code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    color: #333;
+  }
+  pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0;
+  }
+  pre .k { color: #cba6f7; }
+  pre .s { color: #a6e3a1; }
+  pre .c { color: #6c7086; }
+  pre .v { color: #fab387; }
+
+  .note {
+    background: var(--blue-light);
+    border: 1px solid #85B7EB;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .note::before { content: "💡 "; }
+  .warn {
+    background: var(--amber-light);
+    border: 1px solid #EF9F27;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .warn::before { content: "⚠️ "; }
+  .tip {
+    background: var(--green-light);
+    border: 1px solid #5DCAA5;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .tip::before { content: "✅ "; }
+
+  ul, ol { margin: 8px 0 8px 24px; color: var(--text2); font-size: 14px; }
+  li { margin: 6px 0; }
+
+  .toc {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px 28px;
+    margin: 24px 0;
+  }
+  .toc h3 { font-size: 15px; margin-top: 0; color: var(--text); }
+  .toc ol { margin-left: 20px; }
+  .toc li { margin: 4px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .screenshot {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .screenshot .caption {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 6px;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .card h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .card p { font-size: 13px; margin: 4px 0; }
+
+  footer {
+    text-align: center;
+    padding: 40px 0 20px;
+    color: var(--text3);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>AlgorithmVisualizer 环境配置说明书</h1>
+  <p class="subtitle">算法及数据结构可视化教学应用 &mdash; 从零开始的环境搭建指南</p>
+  <div class="badge">Qt 6.8.3 + MinGW + Clang + CMake/Ninja</div>
+</div>
+
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s1">项目简介</a></li>
+    <li><a href="#s2">环境依赖总览</a></li>
+    <li><a href="#s3">第一步：安装 Qt 6.8.3</a></li>
+    <li><a href="#s4">第二步：安装 Clang（LLVM）</a></li>
+    <li><a href="#s5">第三步：配置 CMakeLists.txt 路径</a></li>
+    <li><a href="#s6">第四步：构建项目</a></li>
+    <li><a href="#s7">第五步：运行与功能使用</a></li>
+    <li><a href="#s8">常见问题排查</a></li>
+    <li><a href="#s9">附录：Clang 安装备选方案</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. 项目简介</h2>
+
+<p><strong>AlgorithmVisualizer</strong> 是一个基于 C++/Qt6 的算法可视化教学桌面应用，支持六大排序算法的逐步动画演示，并提供<strong>开发者模式</strong>——用户可自由编写任意 C++ 代码，由 Clang AST 自动分析、插桩并可视化执行过程。</p>
+
+<div class="diagram-wrap">
+
+<svg viewBox="0 0 680 340" width="100%" role="img">
+  <title>AlgorithmVisualizer 系统架构</title>
+  <desc>架构图：用户操作 -> 两种模式 -> 核心引擎 -> 可视化</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="220" y="16" width="240" height="44" rx="22" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="340" y="42" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="500" fill="#534AB7">AlgorithmVisualizer</text>
+
+  <polyline points="340,60 340,85" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#arrow)"/>
+
+  <rect x="100" y="88" width="184" height="48" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+  <text x="192" y="108" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#185FA5">入门模式</text>
+  <text x="192" y="125" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#378ADD">预置算法 &middot; 一键演示</text>
+
+  <rect x="396" y="88" width="184" height="48" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="488" y="108" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#0F6E56">开发者模式</text>
+  <text x="488" y="125" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1D9E75">自由编码 &middot; 自动插桩</text>
+
+  <polyline points="192,136 192,165 340,165 340,186" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#arrow)"/>
+  <polyline points="488,136 488,165 340,165" fill="none" stroke="#888" stroke-width="0.8"/>
+
+  <rect x="190" y="188" width="300" height="44" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="340" y="208" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#854F0B">核心引擎（AnimationController）</text>
+  <text x="340" y="225" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#BA7517">事件驱动 &middot; 步骤队列 &middot; 播放控制</text>
+
+  <polyline points="340,232 340,260" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#arrow)"/>
+
+  <rect x="200" y="262" width="136" height="38" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="268" y="286" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#A32D2D">ArrayVisualizer</text>
+  <rect x="344" y="262" width="136" height="38" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="412" y="286" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#A32D2D">HeapVisualizer</text>
+
+  <rect x="440" y="18" width="200" height="56" rx="8" fill="#f7f8fa" stroke="#ddd" stroke-width="0.5"/>
+  <text x="540" y="38" text-anchor="middle" font-size="11" fill="#888" font-weight="500">支持算法</text>
+  <text x="540" y="56" text-anchor="middle" font-size="11" fill="#666">冒泡/选择/插入/快速</text>
+  <text x="540" y="70" text-anchor="middle" font-size="11" fill="#666">堆排序 · 归并排序</text>
+
+  <rect x="30" y="174" width="130" height="56" rx="8" fill="#f7f8fa" stroke="#ddd" stroke-width="0.5"/>
+  <text x="95" y="194" text-anchor="middle" font-size="11" fill="#888" font-weight="500">Clang AST</text>
+  <text x="95" y="212" text-anchor="middle" font-size="11" fill="#666">代码插桩 + DLL 编译</text>
+  <text x="95" y="226" text-anchor="middle" font-size="11" fill="#666">24 种操作类型</text>
+</svg>
+
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h4>入门模式</h4>
+    <p>下拉选择算法 → 输入数据 → 播放演示。适合算法初学者，无需编写代码。</p>
+  </div>
+  <div class="card">
+    <h4>开发者模式</h4>
+    <p>自由编写 C++ 代码 → Clang AST 自动分析 → 编译为 DLL 执行 → 多数组可视化回放。</p>
+  </div>
+</div>
+
+<h2 id="s2">2. 环境依赖总览</h2>
+
+<table>
+  <thead>
+    <tr><th>组件</th><th>版本</th><th>用途</th><th>必需</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Qt</strong></td><td>6.8.3 (MinGW 64-bit)</td><td>GUI 框架、事件循环、界面组件</td><td>✅ 必需</td></tr>
+    <tr><td><strong>MinGW</strong></td><td>13.1.0 (64-bit)</td><td>C++17 编译器</td><td>✅ 必需（Qt 自带）</td></tr>
+    <tr><td><strong>CMake</strong></td><td>≥ 3.16</td><td>跨平台构建系统</td><td>✅ 必需（Qt 自带）</td></tr>
+    <tr><td><strong>Ninja</strong></td><td>任意版本</td><td>快速构建后端</td><td>✅ 必需（Qt 自带）</td></tr>
+    <tr><td><strong>Clang</strong></td><td>≥ 3.2</td><td>AST 语法分析（开发者模式）</td><td>✅ 必需（需另装）</td></tr>
+    <tr><td><strong>Windows</strong></td><td>10 / 11 (64-bit)</td><td>操作系统</td><td>✅ 必需</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>Qt Online Installer</strong> 安装时会自动附带 MinGW 编译器、CMake 和 Ninja 工具，无需单独安装。
+  唯一需要额外安装的是 <strong>Clang</strong>。
+</div>
+
+<h2 id="s3">3. 第一步：安装 Qt 6.8.3</h2>
+
+<h3>3.1 下载 Qt Online Installer</h3>
+<p>打开浏览器，访问 Qt 官方下载页面：</p>
+<pre>https://www.qt.io/download-qt-installer</pre>
+<p>选择 <strong>Windows</strong> 平台的在线安装程序，下载并运行。</p>
+
+<h3>3.2 安装步骤</h3>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 680 160" width="100%" role="img">
+  <title>Qt 安装流程</title>
+  <desc>四步流程：注册账号 -> 选择组件 -> 确认安装 -> 完成</desc>
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="30" y="44" width="120" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="90" y="64" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#534AB7">注册 Qt 账号</text>
+  <text x="90" y="84" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#7F77DD">邮箱注册即可</text>
+
+  <polyline points="150,72 190,72" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar2)"/>
+
+  <rect x="194" y="24" width="180" height="96" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+  <text x="284" y="48" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#185FA5">选择组件（关键！）</text>
+  <text x="284" y="68" text-anchor="middle" font-size="11" fill="#378ADD">勾选 Qt 6.8.3</text>
+  <text x="284" y="84" text-anchor="middle" font-size="11" fill="#378ADD">展开后勾选 MinGW 64-bit</text>
+  <text x="284" y="100" text-anchor="middle" font-size="11" fill="#378ADD">同时勾选 CMake 和 Ninja</text>
+
+  <polyline points="374,72 414,72" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar2)"/>
+
+  <rect x="418" y="44" width="120" height="56" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="478" y="64" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#0F6E56">确认安装</text>
+  <text x="478" y="84" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1D9E75">等待约 20 分钟</text>
+
+  <polyline points="538,72 578,72" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar2)"/>
+
+  <rect x="582" y="44" width="70" height="56" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="617" y="72" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#854F0B">完成</text>
+</svg>
+</div>
+
+<div class="warn">
+  <strong>务必勾选 MinGW 64-bit！</strong>如果只选了 MSVC 版本，将无法使用本项目的编译脚本。
+  展开 Qt 6.8.3 后，确保 <code>MinGW 64-bit</code> 处于勾选状态。
+  同时也勾选 <code>CMake</code> 和 <code>Ninja</code>（在 Developer and Designer Tools 分类下）。
+</div>
+
+<h3>3.3 验证安装</h3>
+<p>安装完成后，确认以下目录存在：</p>
+<pre>C:\Qt\6.8.3\mingw_64\        ← Qt 库和 DLL
+C:\Qt\Tools\mingw1310_64\    ← MinGW 编译器
+C:\Qt\Tools\CMake_64\        ← CMake
+C:\Qt\Tools\Ninja\           ← Ninja</pre>
+
+<div class="tip">
+  如果你的 Qt 安装路径不是 <code>C:\Qt</code>，记下实际路径。后面的 CMakeLists.txt 配置中需要用到。
+</div>
+
+<h2 id="s4">4. 第二步：安装 Clang（LLVM）</h2>
+
+<p>Clang 仅在<strong>开发者模式</strong>中使用，用于对用户编写的 C++ 代码进行 AST 语法分析。入门模式不需要 Clang。</p>
+
+<h3>4.1 推荐方案：LLVM 官方安装包</h3>
+
+<ol>
+  <li>访问 LLVM 发布页面：<code>https://github.com/llvm/llvm-project/releases</code></li>
+  <li>找到<strong>最新稳定版本</strong>（如 LLVM 18.x 或 19.x）</li>
+  <li>下载 <code>LLVM-*-win64.exe</code> 安装包</li>
+  <li><strong>运行时选择 "Add LLVM to the system PATH"</strong>（重要！）</li>
+</ol>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 680 140" width="100%" role="img">
+  <title>Clang 安装流程</title>
+  <desc>流程：下载安装包 -> 运行安装 -> 添加到 PATH -> 验证</desc>
+  <defs>
+    <marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="20" y="36" width="130" height="52" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+  <text x="85" y="56" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#185FA5">下载 LLVM 安装包</text>
+  <text x="85" y="76" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#378ADD">LLVM-*.exe</text>
+
+  <polyline points="150,62 186,62" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar3)"/>
+
+  <rect x="190" y="36" width="130" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="255" y="56" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#534AB7">运行安装程序</text>
+  <text x="255" y="76" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#7F77DD">默认安装路径</text>
+
+  <polyline points="320,62 356,62" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar3)"/>
+
+  <rect x="360" y="28" width="150" height="68" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <rect x="368" y="36" width="134" height="24" rx="4" fill="#ffffff" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="435" y="52" text-anchor="middle" font-size="11" fill="#BA7517">☑ Add LLVM to PATH</text>
+  <text x="435" y="84" text-anchor="middle" font-size="11" fill="#888">← 务必勾选！</text>
+
+  <polyline points="510,62 546,62" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar3)"/>
+
+  <rect x="550" y="36" width="110" height="52" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="605" y="56" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#0F6E56">打开终端验证</text>
+  <text x="605" y="76" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1D9E75">clang --version</text>
+</svg>
+</div>
+
+<h3>4.2 验证 Clang 安装</h3>
+<p>打开 <strong>PowerShell</strong> 或 <strong>命令提示符</strong>，输入：</p>
+<pre>clang --version</pre>
+<p>应输出版本信息，例如：</p>
+<pre>clang version 18.1.8
+Target: x86_64-pc-windows-msvc
+Thread model: posix</pre>
+
+<div class="tip">
+  如果提示 "clang 不是内部或外部命令"，说明 PATH 未正确设置。请跳到<a href="#s8">常见问题排查</a>。
+</div>
+
+<h2 id="s5">5. 第三步：配置 CMakeLists.txt 路径</h2>
+
+<p>打开项目根目录下的 <code>CMakeLists.txt</code>，找到并修改以下两行，将路径改为你的 Qt 安装目录：</p>
+
+<pre><span class="c"># === 原始内容（需要修改）===</span>
+<span class="k">set</span>(Qt6_DIR <span class="s">"E:/QT5/qt5/lib/cmake/Qt6"</span>)
+<span class="k">set</span>(CMAKE_PREFIX_PATH <span class="s">"E:/QT5/qt5;${CMAKE_PREFIX_PATH}"</span>)
+
+<span class="c"># === 修改为你的实际路径，例如：===</span>
+<span class="k">set</span>(Qt6_DIR <span class="s">"C:/Qt/6.8.3/mingw_64/lib/cmake/Qt6"</span>)
+<span class="k">set</span>(CMAKE_PREFIX_PATH <span class="s">"C:/Qt/6.8.3/mingw_64;${CMAKE_PREFIX_PATH}"</span>)</pre>
+
+<div class="note">
+  <strong>路径对照表：</strong><br>
+  如果 Qt 装在 <code>C:\Qt</code>，则路径为 <code>C:/Qt/6.8.3/mingw_64</code><br>
+  如果 Qt 装在 <code>D:\Qt6</code>，则路径为 <code>D:/Qt6/6.8.3/mingw_64</code><br>
+  注意使用<strong>正斜杠 /</strong>，不要用反斜杠 \。
+</div>
+
+<p>同样需要修改 <code>build.ps1</code> 中的 Qt 根路径（如果使用构建脚本）：</p>
+<pre><span class="c"># 修改这一行</span>
+<span class="v">$QtRoot</span> = <span class="s">"C:\Qt"</span>   <span class="c">// 改为你的 Qt 安装根目录</span></pre>
+
+<h2 id="s6">6. 第四步：构建项目</h2>
+
+<p>有两种方式构建项目：</p>
+
+<h3>方式 A：使用构建脚本（推荐）</h3>
+<p>在项目根目录打开 PowerShell，运行：</p>
+<pre>.\build.ps1</pre>
+<p>脚本会自动完成清理 → CMake 配置 → Ninja 编译 → 复制运行时 DLL。</p>
+
+<h3>方式 B：手动构建</h3>
+<pre><span class="c"># 1. 设置环境变量</span>
+<span class="v">$env:PATH</span> = <span class="s">"C:\Qt\6.8.3\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\CMake_64\bin;$env:PATH"</span>
+
+<span class="c"># 2. 创建 build 目录</span>
+mkdir build; cd build
+
+<span class="c"># 3. CMake 配置</span>
+cmake .. -G <span class="s">"Ninja"</span>
+
+<span class="c"># 4. 编译</span>
+ninja
+
+<span class="c"># 5. 复制运行时 DLL</span>
+copy C:\Qt\6.8.3\mingw_64\bin\*.dll bin\
+xcopy /E C:\Qt\6.8.3\mingw_64\plugins\platforms bin\platforms\
+</pre>
+
+<div class="tip">
+  编译成功后，可执行文件位于 <code>build\bin\AlgorithmVisualizer.exe</code>。
+  首次 CMake 配置可能需要 10-30 秒，编译需要 30-120 秒（视机器性能而定）。
+</div>
+
+<h2 id="s7">7. 第五步：运行与功能使用</h2>
+
+<h3>7.1 启动应用</h3>
+<p>双击 <code>build\bin\AlgorithmVisualizer.exe</code> 运行程序。主窗口包含两个模式页面，通过顶部工具栏切换。</p>
+
+<div class="two-col">
+  <div class="card">
+    <h4>入门模式</h4>
+    <p>1. 左侧下拉框选择算法（冒泡/选择/插入/快速/堆/归并）</p>
+    <p>2. 右侧输入数据或用"随机生成"按钮</p>
+    <p>3. 点击"开始"播放演示</p>
+    <p>4. 使用播放控件控制速度、暂停、单步</p>
+  </div>
+  <div class="card">
+    <h4>开发者模式</h4>
+    <p>1. 左侧代码编辑器编写任意 C++ 代码</p>
+    <p>2. 点击"运行"按钮</p>
+    <p>3. 程序自动分析、编译、执行并可视化</p>
+    <p>4. 使用播放控件回放执行过程</p>
+  </div>
+</div>
+
+<div style="background:#f7f8fa;border-radius:12px;padding:24px;margin:16px 0;">
+
+<svg viewBox="0 0 640 290" width="100%" role="img">
+  <title>开发者模式执行流程</title>
+  <desc>用户代码 -> Clang AST分析 -> 插桩 -> 编译 DLL -> 执行 -> VizEvent -> 动画回放</desc>
+  <defs>
+    <marker id="ar4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="20" y="14" width="120" height="48" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+  <text x="80" y="34" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#185FA5">用户 C++ 代码</text>
+  <text x="80" y="52" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#378ADD">编写/粘贴</text>
+
+  <polyline points="140,38 176,38" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar4)"/>
+
+  <rect x="180" y="14" width="120" height="48" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="240" y="34" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#534AB7">Clang AST 分析</text>
+  <text x="240" y="52" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#7F77DD">24 种操作识别</text>
+
+  <polyline points="300,38 336,38" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar4)"/>
+
+  <rect x="340" y="14" width="120" height="48" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="400" y="34" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#0F6E56">自动插桩</text>
+  <text x="400" y="52" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1D9E75">注入 viz:: 调用</text>
+
+  <polyline points="460,38 496,38" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar4)"/>
+
+  <rect x="500" y="14" width="120" height="48" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="560" y="34" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#854F0B">编译 DLL</text>
+  <text x="560" y="52" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#BA7517">Clang 编译</text>
+
+  <polyline points="560,62 560,88 400,88 400,108" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar4)"/>
+
+  <rect x="280" y="110" width="240" height="48" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+  <text x="400" y="130" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#A32D2D">DLL 加载执行</text>
+  <text x="400" y="148" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#D85A30">收集 VizEvent 事件</text>
+
+  <polyline points="520,134 556,134" fill="none" stroke="#888" stroke-width="0.8" marker-end="url(#ar4)"/>
+
+  <rect x="560" y="110" width="100" height="48" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="610" y="130" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#854F0B">动画回放</text>
+  <text x="610" y="148" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#BA7517">步骤队列</text>
+
+  <line x1="400" y1="158" x2="400" y2="180" stroke="#888" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="400" y1="180" x2="80" y2="180" stroke="#888" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="80" y1="180" x2="80" y2="200" stroke="#888" stroke-width="0.8" stroke-dasharray="4,3" marker-end="url(#ar4)"/>
+
+  <rect x="20" y="202" width="120" height="40" rx="20" fill="#f0f0f0" stroke="#888" stroke-width="0.5"/>
+  <text x="80" y="226" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#666">多数组可视化</text>
+
+  <text x="410" y="200" font-size="11" fill="#888">如有未命中操作</text>
+  <text x="320" y="252" font-size="13" font-weight="500" fill="#888">ArrayVisualizer × N（按变量名） + HeapVisualizer</text>
+</svg>
+
+</div>
+
+<h3>7.2 开发者模式支持的代码示例</h3>
+<p>开发者模式支持以下 C++ 操作的自动可视化：</p>
+
+<table>
+  <thead>
+    <tr><th>类别</th><th>支持的操作</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>数组操作</strong></td><td>swap, compare, assign, read</td></tr>
+    <tr><td><strong>容器操作</strong></td><td>push_back, pop_back, insert, erase, clear, resize, emplace_back, at</td></tr>
+    <tr><td><strong>STL 算法</strong></td><td>sort, reverse, fill, binary_search, find, copy, remove, replace, rotate</td></tr>
+    <tr><td><strong>跨数组</strong></td><td>cross compare, cross assign, container swap</td></tr>
+    <tr><td><strong>函数调用</strong></td><td>引用参数别名路由（参数传递跟踪）</td></tr>
+  </tbody>
+</table>
+
+<div class="tip">
+  项目 <code>test_codes/</code> 目录下有 8 个测试文件，覆盖所有操作类型。可以将其中的代码粘贴到开发者模式中体验。
+</div>
+
+<h2 id="s8">8. 常见问题排查</h2>
+
+<h3>Q1: 编译报错 "Qt6 not found"</h3>
+<div class="warn">
+  <strong>原因：</strong>CMakeLists.txt 中的 Qt 路径与你的实际安装路径不一致。<br>
+  <strong>解决：</strong>修改 <code>CMakeLists.txt</code> 中 <code>Qt6_DIR</code> 和 <code>CMAKE_PREFIX_PATH</code> 为你的 Qt 安装路径（参见第 5 步）。
+</div>
+
+<h3>Q2: 运行 exe 报 "缺少 Qt6Core.dll" 等 DLL 错误</h3>
+<div class="warn">
+  <strong>原因：</strong>运行时 DLL 未复制到 exe 同目录。<br>
+  <strong>解决：</strong>将 <code>C:\Qt\6.8.3\mingw_64\bin\*.dll</code> 复制到 <code>build\bin\</code> 目录，并创建 <code>build\bin\platforms\</code> 和 <code>build\bin\styles\</code> 子目录放入相应插件 DLL。或直接运行 <code>build.ps1</code> 自动完成。
+</div>
+
+<h3>Q3: 开发者模式运行时报 "clang not found"</h3>
+<div class="warn">
+  <strong>原因：</strong>Clang 未安装或未加入 PATH。<br>
+  <strong>解决：</strong>
+  <ul>
+    <li>方案 A：安装 LLVM，勾选 "Add to PATH"</li>
+    <li>方案 B：如果已安装 Visual Studio 2022，可在 <code>C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin\</code> 找到 clang.exe</li>
+    <li>方案 C：通过 MSYS2 安装：<code>pacman -S mingw-w64-x86_64-clang</code></li>
+  </ul>
+</div>
+
+<h3>Q4: 编译链接报 "Permission denied"</h3>
+<div class="warn">
+  <strong>原因：</strong>AlgorithmVisualizer.exe 正在运行，编译器无法写入。<br>
+  <strong>解决：</strong>关闭正在运行的程序，然后重新编译。
+</div>
+
+<h3>Q5: 修改 CMakeLists.txt 后编译不生效</h3>
+<div class="note">
+  <strong>原因：</strong>CMake 缓存了旧配置。<br>
+  <strong>解决：</strong>删除 <code>build/</code> 目录，重新运行 <code>CMake 配置 + Ninja 编译</code>。
+</div>
+
+<h2 id="s9">9. 附录：Clang 安装备选方案</h2>
+
+<p>如果不想安装完整的 LLVM，以下备选方案也可满足需求：</p>
+
+<table>
+  <thead>
+    <tr><th>方案</th><th>说明</th><th>路径示例</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Visual Studio 2022</strong></td>
+      <td>VS 自带 LLVM 工具链</td>
+      <td><code>C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin\clang.exe</code></td>
+    </tr>
+    <tr>
+      <td><strong>MSYS2</strong></td>
+      <td>包管理器安装</td>
+      <td><code>C:\msys64\mingw64\bin\clang.exe</code></td>
+    </tr>
+    <tr>
+      <td><strong>LLVM 官方</strong></td>
+      <td>独立安装包（推荐）</td>
+      <td><code>C:\Program Files\LLVM\bin\clang.exe</code></td>
+    </tr>
+    <tr>
+      <td><strong>PATH 中的 clang</strong></td>
+      <td>任意方式，只要终端能执行 <code>clang</code></td>
+      <td>程序会尝试系统 PATH 查找</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>程序的 Clang 搜索顺序：</strong><br>
+  1. VS 2022/2026 自带 LLVM（Community/Professional/Enterprise/BuildTools）<br>
+  2. MSYS2（mingw64/ucrt64/clang64）<br>
+  3. MinGW 安装目录<br>
+  4. 系统 PATH 中的 <code>clang</code> 命令<br>
+  只要以上任一位置有 clang.exe 即可运行开发者模式。
+</div>
+
+<footer>
+  <p>AlgorithmVisualizer 环境配置说明书 &mdash; 版本 1.0</p>
+  <p>如有问题，请对照第 8 节常见问题排查</p>
+</footer>
+
+</body>
+</html>
