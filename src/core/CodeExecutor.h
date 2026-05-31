@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QSet>
 #include <QLibrary>
 #include <QMap>
 #include "../recorder/VizEvent.h"
@@ -31,7 +32,11 @@ public:
     const std::vector<VizEvent>& getEvents() const { return m_events; }
 
     // 将事件转换为动画步骤并填入 AnimationController
-    void convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizMap, AnimationController* animCtrl);
+    // localVarNames: 面板中有本地变量（非函数参数）的变量名集合；
+    //   当值参数与本地变量同名时，ArrayDestroy 不 hide 面板而是恢复本地变量的数据
+    void convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizMap,
+                              AnimationController* animCtrl,
+                              const QSet<QString>& localVarNames = {});
 
     // 获取转换后的代码（用于调试）
     QString getTransformedCode() const { return m_transformedCode; }

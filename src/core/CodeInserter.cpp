@@ -193,13 +193,14 @@ QString CodeInserter::generateAssignCode(const TrackedOperation& op) {
     if (op.type == TrackedOperation::CrossAssign) {
         // 跨数组赋�? arr[i] = brr[j]
         // 先读�?brr[j] 的值，再写�?arr[i]
-        const TrackedVariable* otherVar = findVar(op.otherArrayName);
-        QString otherDataExpr = otherVar ? getDataExpr(*otherVar) : op.otherArrayName;
+        // 注意：index1 和 otherIndex 可能包含副作用（如 i++），需缓存避免双重求值
         return QString(
             "{\n"
-            "    int _viz_cross_val = %1[%2];\n"
-            "    viz::setValue(%3, %4, _viz_cross_val, \"%5\");\n"
-            "    %5.data()[%4] = _viz_cross_val;\n"
+            "    int _viz_idx1 = %4;\n"
+            "    int _viz_idx2 = %2;\n"
+            "    int _viz_cross_val = %1[_viz_idx2];\n"
+            "    viz::setValue(%3, _viz_idx1, _viz_cross_val, \"%5\");\n"
+            "    %5.data()[_viz_idx1] = _viz_cross_val;\n"
             "}\n"
         ).arg(op.otherArrayName).arg(op.otherIndex)
          .arg(dataExpr).arg(op.index1).arg(op.arrayName);
@@ -818,21 +819,35 @@ QString CodeInserter::generateCrossOpCode(const TrackedOperation& op) {
         // 跨数组比较 arr[i] > brr[j]
         // viz::crossCompare 返回 void，不能直接用做 if 条件，需用逗号运算符
         // (viz::crossCompare(...), arr[i] > brr[j]) ——先记录可视化事件，再返回实际比较结果
+        //
+        // 多维索引处理（如 buckets[i][j] → index="i][j"）：
+        // viz API 调用需要最内层简单索引，显示表达式需要完整链
+        QString fullIdx1 = op.index1;
+        QString fullIdx2 = op.otherIndex;
+        QString innerIdx1 = fullIdx1;
+        QString innerIdx2 = fullIdx2;
+        int lastBracket1 = fullIdx1.lastIndexOf("][");
+        int lastBracket2 = fullIdx2.lastIndexOf("][");
+        if (lastBracket1 >= 0) innerIdx1 = fullIdx1.mid(lastBracket1 + 2);
+        if (lastBracket2 >= 0) innerIdx2 = fullIdx2.mid(lastBracket2 + 2);
+
         return QString(
-            "(viz::crossCompare(%1, %2, %3, %4, \"%5\", \"%6\"), %5[%2] %7 %8[%4])"
-        ).arg(dataExpr).arg(op.index1)
-         .arg(otherDataExpr).arg(op.otherIndex)
+            "(viz::crossCompare(%1, %2, %3, %4, \"%5\", \"%6\"), %5[%7] %8 %10[%9])"
+        ).arg(dataExpr).arg(innerIdx1)
+         .arg(otherDataExpr).arg(innerIdx2)
          .arg(op.arrayName).arg(op.otherArrayName)
-         .arg(op.opcode).arg(op.otherArrayName);
+         .arg(fullIdx1).arg(op.opcode).arg(fullIdx2).arg(op.otherArrayName);
     }
     if (op.type == TrackedOperation::CrossAssign) {
         // 跨数组赋�? arr[i] = brr[j]
         // 先读�?brr[j] 的值，再用带指针的 setValue 写入 arr[i]
+        // 注意：otherIndex 可能包含副作用（如 i++），需缓存避免双重求值
         return QString(
             "{\n"
-            "    int _viz_cv = %1[%2];\n"
+            "    int _viz_cross_idx = %2;\n"
+            "    int _viz_cv = %1[_viz_cross_idx];\n"
             "    viz::setValue(%3, %4, _viz_cv, \"%5\");\n"
-            "    %1[%2] = _viz_cv;\n"
+            "    %1[_viz_cross_idx] = _viz_cv;\n"
             "}\n"
         ).arg(op.otherArrayName).arg(op.otherIndex)
          .arg(dataExpr).arg(op.index1).arg(op.arrayName);
@@ -950,21 +965,111 @@ void CodeInserter::insertCallAliases(const QString& sourceCode,
         
         if (pushCode.isEmpty()) continue;
         
-        // pushAlias 在调用之前（beginOffset），popAlias 在调用之后（endOffset）
-        Insertion pushIns;
-        pushIns.offset = cs.beginOffset;
-        pushIns.text = pushCode;
-        pushIns.order = 4900;  // 在 cleanup (5000) 之前
-        m_insertions.append(pushIns);
+        // 检测调用上下文：是否在 return 或赋值语句中
+        // 如果是 return call(...); 或 x = call(...); 则不能简单地在调用前插入 pushAlias，
+        // 否则 pushAlias 的 ; 会截断语句（return void; 或 x = void;）
+        bool inReturnContext = false;
+        bool inAssignContext = false;
+        int ctxStart = cs.beginOffset;
         
-        Insertion popIns;
-        popIns.offset = cs.endOffset;
-        popIns.text = popCode;
-        popIns.order = 4901;
-        m_insertions.append(popIns);
+        {
+            // 从 beginOffset 向前扫描，跳过空白
+            int pos = cs.beginOffset - 1;
+            while (pos >= 0 && (sourceCode[pos] == ' ' || sourceCode[pos] == '\t')) pos--;
+            
+            // 检查是否是 return 关键字
+            if (pos >= 5) {
+                QString before6 = sourceCode.mid(pos - 5, 6);
+                if (before6 == "return") {
+                    // 确认 "return" 是独立关键字（前一个字符不是字母/数字/下划线）
+                    bool validBefore = (pos - 6 < 0) || 
+                        (!sourceCode[pos - 6].isLetterOrNumber() && sourceCode[pos - 6] != '_');
+                    if (validBefore) {
+                        inReturnContext = true;
+                        ctxStart = pos - 5;  // 'r' 的位置
+                    }
+                }
+            }
+            
+            // 检查是否是赋值 = 运算符
+            if (!inReturnContext && pos >= 0 && sourceCode[pos] == '=') {
+                inAssignContext = true;
+            }
+        }
         
-        qDebug() << "[CallAliases]" << cs.funcName
-                 << "push:" << pushCode << "pop:" << popCode
-                 << "offset:" << cs.beginOffset << "-" << cs.endOffset;
+        if (inReturnContext) {
+            // return call(...); → { pushCode auto _viz_ret = call(...); popCode return _viz_ret; }
+            // 获取原始调用文本
+            QString callText = sourceCode.mid(cs.beginOffset, cs.endOffset - cs.beginOffset);
+            QString blockCode = QString(
+                "{\n"
+                "    %1\n"
+                "    auto _viz_ret = %2;\n"
+                "    %3\n"
+                "    return _viz_ret;\n"
+                "}\n"
+            ).arg(pushCode.trimmed()).arg(callText).arg(popCode.trimmed());
+            
+            Insertion ins;
+            ins.offset = ctxStart;
+            ins.replaceLen = cs.endOffset - ctxStart;
+            ins.text = blockCode;
+            ins.order = 4900;
+            m_insertions.append(ins);
+            
+            qDebug() << "[CallAliases-RETURN]" << cs.funcName
+                     << "block:" << blockCode.left(80)
+                     << "offset:" << ctxStart << "-" << cs.endOffset;
+        } else if (inAssignContext) {
+            // x = call(...); → pushCode x = call(...);popCode
+            // 将 pushIns 插入到赋值语句之前（= 之前、语句开头）
+            int stmtStart = cs.beginOffset;
+            int pos = cs.beginOffset - 1;
+            // 向前找到 = 的位置
+            while (pos >= 0 && sourceCode[pos] != '=') pos--;
+            if (pos >= 0) {
+                // 从 = 向前找到语句开头（行首或上一个 ;）
+                int scan = pos - 1;
+                while (scan >= 0 && sourceCode[scan] != ';' && 
+                       sourceCode[scan] != '{' && sourceCode[scan] != '}') scan--;
+                stmtStart = scan + 1;
+                // 跳过语句开头的空白
+                while (stmtStart < (int)sourceCode.length() && 
+                       (sourceCode[stmtStart] == ' ' || sourceCode[stmtStart] == '\t')) stmtStart++;
+            }
+            
+            Insertion pushIns;
+            pushIns.offset = stmtStart;
+            pushIns.text = pushCode;
+            pushIns.order = 4900;
+            m_insertions.append(pushIns);
+            
+            Insertion popIns;
+            popIns.offset = cs.endOffset;
+            popIns.text = popCode;
+            popIns.order = 4901;
+            m_insertions.append(popIns);
+            
+            qDebug() << "[CallAliases-ASSIGN]" << cs.funcName
+                     << "push:" << pushCode << "pop:" << popCode
+                     << "pushOffset:" << stmtStart << "popOffset:" << cs.endOffset;
+        } else {
+            // 普通上下文：pushAlias 在调用之前，popAlias 在调用之后
+            Insertion pushIns;
+            pushIns.offset = cs.beginOffset;
+            pushIns.text = pushCode;
+            pushIns.order = 4900;
+            m_insertions.append(pushIns);
+            
+            Insertion popIns;
+            popIns.offset = cs.endOffset;
+            popIns.text = popCode;
+            popIns.order = 4901;
+            m_insertions.append(popIns);
+            
+            qDebug() << "[CallAliases]" << cs.funcName
+                     << "push:" << pushCode << "pop:" << popCode
+                     << "offset:" << cs.beginOffset << "-" << cs.endOffset;
+        }
     }
 }

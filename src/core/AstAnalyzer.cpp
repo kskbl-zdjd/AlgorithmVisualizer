@@ -1886,27 +1886,54 @@ QString AstAnalyzer::getSubscriptIndex(const QJsonObject& node) {
     // 对于 ArraySubscriptExpr: inner = [base, index]
     // 对于 CXXOperatorCallExpr: inner = [operator[], base, index]
     // 对于 CXXMemberCallExpr(at): inner = [MemberExpr, index, ...]
+    int receiverPos;
     int indexPos;
     if (subscriptNode["kind"].toString() == "CXXOperatorCallExpr") {
         if (inner.size() < 3) return "";
+        receiverPos = 1;
         indexPos = 2;  // 第三个元素是索引
     } else if (subscriptNode["kind"].toString() == "CXXMemberCallExpr") {
         if (inner.size() < 2) return "";
         return extractSourceExpr(inner[1].toObject());
     } else {
         if (inner.size() < 2) return "";
+        receiverPos = 0;
         indexPos = 1;  // 第二个元素是索引
     }
 
-    QJsonObject indexNode = inner[indexPos].toObject();
+    // 检测嵌套下标（如 buckets[i][j] — vector<vector<int>> 的二维访问）
+    // 当 receiver 本身也是一个下标表达式时，需要提取完整下标链
+    // 例如：buckets[i][j] → 返回 "i][j"（配合 CodeInserter 模板 %1[%2] 生成 buckets[i][j]）
+    QString innerChain;
+    QJsonObject receiverNode = inner[receiverPos].toObject();
+    
+    // 穿透 MaterializeTemporaryExpr 和 ImplicitCastExpr 包装
+    while (receiverNode["kind"].toString() == "MaterializeTemporaryExpr" ||
+           receiverNode["kind"].toString() == "ImplicitCastExpr") {
+        if (!receiverNode.contains("inner")) break;
+        QJsonArray ri = receiverNode["inner"].toArray();
+        if (ri.isEmpty()) break;
+        receiverNode = ri[0].toObject();
+    }
+    
+    QString receiverKind = receiverNode["kind"].toString();
+    if (receiverKind == "CXXOperatorCallExpr" || receiverKind == "ArraySubscriptExpr") {
+        // receiver 是嵌套下标，递归提取内层索引链
+        QString subIndex = getSubscriptIndex(receiverNode);
+        if (!subIndex.isEmpty()) {
+            innerChain = subIndex + "][";
+        }
+    }
 
-    // 获取索引的源码文本（转换为char offset）
+    // 获取外层索引的源码文本
+    QJsonObject indexNode = inner[indexPos].toObject();
     QJsonObject range = indexNode["range"].toObject();
     int begin = extractCharOffset(range, "begin");
     int end = extractCharOffset(range, "end");
     int tokLen = range["end"].toObject()["tokLen"].toInt();
+    QString outerIndex = m_sourceCode.mid(begin, end + tokLen - begin);
 
-    return m_sourceCode.mid(begin, end + tokLen - begin);
+    return innerChain + outerIndex;
 }
 
 bool AstAnalyzer::isTrackedVariable(const QString& name) const {

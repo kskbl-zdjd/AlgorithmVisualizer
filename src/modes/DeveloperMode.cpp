@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QMessageBox>
+#include <QSet>
 
 DeveloperMode::DeveloperMode(QWidget* parent)
     : QWidget(parent)
@@ -211,40 +212,60 @@ void DeveloperMode::onRunClicked() {
     m_arrayVisualizers.clear();
 
     // 根据分析出的变量动态创建 ArrayVisualizer
-    // 注意：同一变量名可能出现在多处（如多个函数使用 vector<int>& v 作为引用参数），
-    // 或与主函数变量重名（如 testCopySwap 的 v1 参数 vs main() 的 v1 局部变量）。
-    // 为避免 QMap 键冲突导致面板孤儿（接收不到事件），跳过已存在的同名变量。
+    // 创建策略：
+    // 1. 引用参数（isReferenceParam=true）：不创建面板，事件通过 pushAlias 别名路由到调用者面板
+    // 2. 本地变量（isParameter=false）：总是创建面板
+    // 3. 值传递参数（isParameter=true, !isReferenceParam）：
+    //    - 若同名本地变量面板已存在：不创建新面板，复用已有面板（两者在运行时共享同一 ArrayVisualizer）
+    //    - 若无同名面板：创建面板（初始隐藏，等 viz::array 注册时 show）
+    //    - 注意：同一函数有多个调用点时，所有同名值参数复用同一面板
+    //
+    // 实现方式：先处理非参数变量，再处理值参数，确保本地变量优先占据 QMap 中的槽位
     const auto& vars = m_codeExecutor->getTrackedVariables();
-    for (const auto& var : vars) {
-        // 引用参数不创建独立面板——事件通过别名路由到调用者原变量面板
-        if (var.isReferenceParam) continue;
-        // 同名变量只创建第一个面板
-        if (m_arrayVisualizers.contains(var.name)) {
-            continue;
-        }
 
-        // 创建包裹容器：label + ArrayVisualizer 作为一个整体可被 hide/show
-        auto* wrapper = new QWidget(m_vizContainer);
-        auto* wrapperLayout = new QVBoxLayout(wrapper);
-        wrapperLayout->setContentsMargins(0, 0, 0, 0);
-        wrapperLayout->setSpacing(2);
+    // 分两轮创建：第一轮本地变量，第二轮值参数
+    for (int pass = 0; pass < 2; ++pass) {
+        for (const auto& var : vars) {
+            // 引用参数始终跳过
+            if (var.isReferenceParam) continue;
 
-        QLabel* label = new QLabel(var.name + " (" + var.type + ")", wrapper);
-        label->setStyleSheet("font-weight: bold; color: #333; padding: 4px 0;");
+            bool isValueParam = (var.isParameter && !var.isReferenceParam);
 
-        auto* viz = new ArrayVisualizer(wrapper);
-        viz->setMinimumHeight(100);
+            // 第一轮只处理本地变量；第二轮只处理值参数
+            if (pass == 0 && isValueParam) continue;
+            if (pass == 1 && !isValueParam) continue;
 
-        wrapperLayout->addWidget(label);
-        wrapperLayout->addWidget(viz);
+            if (m_arrayVisualizers.contains(var.name)) {
+                // 面板已存在（同名本地变量已在第一轮创建，或多个同名值参数）
+                // 值参数复用已有面板：无需额外操作，事件通过 arrayName 自动路由
+                // 本地变量重复出现（多个函数内同名局部变量）：也复用第一个面板
+                continue;
+            }
 
-        m_vizLayout->addWidget(wrapper);
-        m_arrayWrappers.insert(var.name, wrapper);
-        m_arrayVisualizers.insert(var.name, viz);
+            // 创建包裹容器：label + ArrayVisualizer 作为一个整体可被 hide/show
+            auto* wrapper = new QWidget(m_vizContainer);
+            auto* wrapperLayout = new QVBoxLayout(wrapper);
+            wrapperLayout->setContentsMargins(0, 0, 0, 0);
+            wrapperLayout->setSpacing(2);
 
-        // 值参数（非引用）面板初始隐藏：因为它们的 viz::array 在函数体开头才注册
-        if (var.isParameter && !var.isReferenceParam) {
-            wrapper->hide();
+            QLabel* label = new QLabel(var.name + " (" + var.type + ")", wrapper);
+            label->setStyleSheet("font-weight: bold; color: #333; padding: 4px 0;");
+
+            auto* viz = new ArrayVisualizer(wrapper);
+            viz->setMinimumHeight(100);
+
+            wrapperLayout->addWidget(label);
+            wrapperLayout->addWidget(viz);
+
+            m_vizLayout->addWidget(wrapper);
+            m_arrayWrappers.insert(var.name, wrapper);
+            m_arrayVisualizers.insert(var.name, viz);
+
+            // 值参数面板初始隐藏：等到函数被调用时 viz::array 触发 ArrayCreate 事件再 show
+            // 本地变量面板始终可见（声明时立即注册）
+            if (isValueParam) {
+                wrapper->hide();
+            }
         }
     }
 
@@ -256,7 +277,15 @@ void DeveloperMode::onRunClicked() {
     }
 
     // 编译执行成功，转换为动画步骤
-    m_codeExecutor->convertEventsToSteps(m_arrayVisualizers, m_animCtrl);
+    // 构建"本地变量名集合"：面板中有非参数本地变量的名称
+    // 当值参数与同名本地变量共用面板时，ArrayDestroy 应恢复本地变量数据而非 hide 面板
+    QSet<QString> localVarNames;
+    for (const auto& var : m_codeExecutor->getTrackedVariables()) {
+        if (!var.isParameter) {
+            localVarNames.insert(var.name);
+        }
+    }
+    m_codeExecutor->convertEventsToSteps(m_arrayVisualizers, m_animCtrl, localVarNames);
 
     // 更新复杂度显示
     updateComplexityDisplay();

@@ -230,7 +230,9 @@ bool CodeExecutor::runDll(QString& error) {
     return true;
 }
 
-void CodeExecutor::convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizMap, AnimationController* animCtrl) {
+void CodeExecutor::convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizMap,
+                                        AnimationController* animCtrl,
+                                        const QSet<QString>& localVarNames) {
     animCtrl->clearSteps();
 
     // 获取默认视觉器（第一个，用于回退）
@@ -238,6 +240,12 @@ void CodeExecutor::convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizM
     if (!arrVizMap.isEmpty()) {
         defaultViz = arrVizMap.first();
     }
+
+    // 本地变量快照：当本地变量与值参数共用面板时，
+    // ArrayCreate 事件中先记录本地变量的数据快照，
+    // ArrayDestroy 时（值参数销毁）恢复该快照而非 hide 面板
+    // key: ArrayVisualizer*, value: 本地变量最近一次 ArrayCreate 的数据
+    QMap<ArrayVisualizer*, std::vector<int>> localVarSnapshot;
 
     for (const auto& e : m_events) {
         AnimationStep step;
@@ -256,6 +264,9 @@ void CodeExecutor::convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizM
             stepPrefix = QString("[%1] ").arg(arrName);
         }
 
+        // 是否是"本地变量共用面板"的情况（面板名在 localVarNames 里）
+        bool sharedWithLocal = localVarNames.contains(arrName);
+
         switch (e.type) {
         case VizEventType::ArrayCreate: {
             // 从固定数组构建 vector（安全跨 DLL 边界）
@@ -264,13 +275,24 @@ void CodeExecutor::convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizM
             for (int i = 0; i < e.arrayDataCount; i++) {
                 data.push_back(e.arrayData[i]);
             }
-            
-            step.execute = [arrViz, data]() {
-                // 恢复父容器可见（值参数从隐藏恢复时）
-                if (arrViz->parentWidget()) arrViz->parentWidget()->show();
+
+            // 如果面板与本地变量共享（值传递参数同名），记录快照
+            if (sharedWithLocal) {
+                localVarSnapshot[arrViz] = data;
+            }
+
+            step.execute = [arrViz, data, sharedWithLocal]() {
+                // 对于本地变量的 ArrayCreate：面板已经可见，直接更新数据
+                // 对于值参数（sharedWithLocal=false）的 ArrayCreate：show 面板并更新
+                if (!sharedWithLocal) {
+                    if (arrViz->parentWidget()) arrViz->parentWidget()->show();
+                }
                 arrViz->setData(data);
             };
-            step.undo = [arrViz]() {
+            step.undo = [arrViz, sharedWithLocal]() {
+                if (!sharedWithLocal) {
+                    if (arrViz->parentWidget()) arrViz->parentWidget()->hide();
+                }
                 arrViz->setData({});
             };
             step.description = stepPrefix + QString("创建数组 %1（大小=%2）").arg(e.arrayName).arg(e.arrayDataCount);
@@ -415,14 +437,37 @@ void CodeExecutor::convertEventsToSteps(QMap<QString, ArrayVisualizer*>& arrVizM
             break;
 
         case VizEventType::ArrayDestroy: {
-            // 值参数生命周期：函数退出时隐藏面板（通过父容器）
-            step.execute = [arrViz]() {
-                if (arrViz->parentWidget()) arrViz->parentWidget()->hide();
-            };
-            step.undo = [arrViz]() {
-                if (arrViz->parentWidget()) arrViz->parentWidget()->show();
-            };
-            step.description = stepPrefix + QString("销毁数组 %1（函数退出）").arg(QString(e.arrayName));
+            // 值参数生命周期结束（函数退出）
+            // 若面板与本地变量共享：恢复本地变量的数据快照，面板保持可见
+            // 否则：隐藏面板
+            std::vector<int> snapshot;
+            bool hasSnapshot = localVarSnapshot.contains(arrViz);
+            if (hasSnapshot) {
+                snapshot = localVarSnapshot[arrViz];
+            }
+
+            if (hasSnapshot) {
+                // 共享面板：恢复原始本地变量数据，面板保持可见
+                step.execute = [arrViz, snapshot]() {
+                    arrViz->resetAllBlockStates();
+                    arrViz->setData(snapshot);
+                };
+                step.undo = [arrViz, snapshot]() {
+                    // undo 时（倒播）：什么都不做，因为接下来会有对应 ArrayCreate 的 undo 恢复数据
+                    // 不需要特别处理
+                    (void)snapshot;
+                };
+                step.description = stepPrefix + QString("销毁参数副本 %1（函数退出）→ 恢复原数组").arg(QString(e.arrayName));
+            } else {
+                // 独立面板：直接隐藏
+                step.execute = [arrViz]() {
+                    if (arrViz->parentWidget()) arrViz->parentWidget()->hide();
+                };
+                step.undo = [arrViz]() {
+                    if (arrViz->parentWidget()) arrViz->parentWidget()->show();
+                };
+                step.description = stepPrefix + QString("销毁数组 %1（函数退出）").arg(QString(e.arrayName));
+            }
             break;
         }
 
